@@ -36,7 +36,7 @@ def score(dice)
 
   # Exit if empty array; or array.size > 5
   if(dice.size < 1 or dice.size > 5)
-      return result
+    return result
   end
 
   # if three 1's, + 1000
@@ -68,20 +68,20 @@ def score(dice)
   # That is, the value within | | corresponds to what is passed into the block.
   # In this case, it's a hash, so each "hash location" has a key and a value.
   countHash.each do |die, count|
-      if count >= 3
+    if count >= 3
       # NOTE:  Changing the "if" to "while" allows this to scale to >6 dice,
       # accounting for multiple triples.
-          if die == 1
-              result += 1000
-          else
-              result += (die * 100)
-          end
-          # Now count potential "single instances" of each number if there are > 3 instances.
-          count -= 3
+      if die == 1
+        result += 1000
+      else
+        result += (die * 100)
       end
+      # Now count potential "single instances" of each number if there are > 3 instances.
+      count -= 3
+    end
 
-      result += (die == 1 ? count * 100 : 0)
-      result += (die == 5 ? count * 50 : 0)
+    result += (die == 1 ? count * 100 : 0)
+    result += (die == 5 ? count * 50 : 0)
   end
 
   result

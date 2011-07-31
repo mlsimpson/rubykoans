@@ -41,7 +41,7 @@ class AboutArrays < EdgeCase::Koan
     assert_equal [:and, :jelly], array[2,20]
     assert_equal [], array[4,0]
     assert_equal [], array[4,100]
-    # Matt note:  Why is [4,0] == [], and [5,0] == nil?
+    # NOTE:  Why is [4,100] == [], and [5,0] == nil?
     assert_equal nil, array[5,0]
   end
 

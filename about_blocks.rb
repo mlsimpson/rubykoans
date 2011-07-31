@@ -7,6 +7,8 @@ class AboutBlocks < EdgeCase::Koan
   end
   # Yield is kind of like a place holder that says "I'm going to branch off and do something here, but I don't know what I'm going to do yet".
   # See:  http://fairleads.blogspot.com/2007/06/ruby-yield.html
+  #
+  # In other words, yield is a place holder for a *block*
 
   def test_methods_can_take_blocks
     yielded_result = method_with_block { 1 + 2 }

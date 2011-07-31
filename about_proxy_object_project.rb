@@ -37,7 +37,7 @@ class Proxy
       @times_called[method_name] += 1
       # Add the method_name to the @messages array if it hasn't been called already.
       unless @messages.include?(method_name)
-          @messages << method_name
+        @messages << method_name
       end
       @object.send(method_name, *args) # Call that method
       # Note the use of a splat again.  Since the original splat in method_missing transformed
@@ -50,17 +50,17 @@ class Proxy
   end
 
   def called?(method_name)
-      @times_called.key?(method_name)
+    @times_called.key?(method_name)
   end
 
   def number_of_times_called(method_name)
-      # if called?(method_name)
-      #     @times_called[method_name]
-      # else
-      #     0
-      # end
-      # REFACTOR
-      called?(method_name) ? @times_called[method_name] : 0
+    # if called?(method_name)
+    #     @times_called[method_name]
+    # else
+    #     0
+    # end
+    # REFACTOR
+    called?(method_name) ? @times_called[method_name] : 0
   end
 
 end

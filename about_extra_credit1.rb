@@ -109,10 +109,28 @@ def menu_screen
       rules
     elsif menuselect == 2
       game.addplayers
-      while game.active
+      # while game.active
       # TODO:  While no player is over 3000
-        game.play
-      end
+        # 2:  Display Header
+        game.printheader
+        # Player rolls.
+        game.playerarray[1].playerroll(5)
+        game.playerarray[1].printscore
+        # Player is asked to roll again.
+        # - unless the roll is zero score
+        # 3:  Player rolls first with 5 dice
+        # 4:  Display current roll score
+        #   - Display Header and Roll score.  Header is in Game, Roll Score is in Player.
+        # 5:  If zero, next player
+        # 6:  Ask to roll again with new dice
+        #   - If all dice score, roll with 5 dice.
+        # 7:  Display current roll score
+        # 8:  Check if player > 3000
+        
+        # for each roll, display the header and the current roll score.
+        # game.play
+
+      # end
     elsif menuselect == 3
       # Final Tally:
       # - if @playerarray is empty, simply display the line below
@@ -150,6 +168,16 @@ class DiceSet
   def roll(x)
     @values = (1..x).map{ rand(6) + 1 }
   end
+
+  def currentscore(dice)
+    setpoints=[0,1000,200,300,400,500,600]
+    piecepoints=[0,100,0,0,0,50,0]
+    (1..6).map{|i|
+      num=dice.select{|n| n==i}.size
+      num/3*setpoints[i]+num%3*piecepoints[i]
+    }.inject(0){|a,b| a+b}
+  end
+
 end
 
 class Player
@@ -175,11 +203,118 @@ class Player
         return false
       end
   end
+
+  def currentscore(dice)
+    setpoints=[0,1000,200,300,400,500,600]
+    piecepoints=[0,100,0,0,0,50,0]
+    (1..6).map{|i|
+      num=dice.select{|n| n==i}.size
+      num/3*setpoints[i]+num%3*piecepoints[i]
+    }.inject(0){|a,b| a+b}
+  end
+
+  def rollagain # If Return is pressed alone, returns "Y" as the default
+    defaultArray = ["Y"]
+    print "\nKeep rolling? [yn] or Q to quit.  (Default = y)  ".console_red.chomp
+    defaultArray << gets.to_s.chomp.upcase
+    defaultArray[1].empty? ? defaultArray[0] : defaultArray[1] # Otherwise, return entered value.
+  end
+
+  def printscore(p, r, u, score, accumulatedscore)
+    puts "#{p.name}'s turn.".console_dark_blue_underline + "\n\n" # Print player name
+    print "Dice values:  [#{r.join("] [")}]\n" # Print dice values
+    print "Roll Score:  #{score}\n" # Print current roll score
+    puts "Unscored dice:  " + "[#{u.join("] [")}]" # Print unscored dice
+    puts "\n#{p.name}'s score so far:  #{accumulatedscore}\n" # Print player's score so far
+    x = gets
+  end
+
+  def play
+    # Set initial values per round
+    #
+    # For final round, do this for all but the last player, then
+    # exit & print scores.
+    numdice = 5
+    accumulatedscore = 0
+    @keeprolling = "Y"
+    while @keeprolling == "Y"
+      if @final == true
+        if @playerarray[-1].name == @name
+          puts @name
+          # exit
+          # gameover
+        end
+      end
+      roll = playerroll(numdice)
+
+      rollscore = currentscore(roll)
+      accumulatedscore += rollscore
+
+      unscored = roll.dup
+
+      unscored = unscored.each{|n|
+        3.times{unscored.delete_at(unscored.index(n))} if unscored.count(n) >= 3
+      }.reject{|n|
+        n == 1 || n == 5
+      }
+
+      printscore(self, roll, unscored, rollscore, accumulatedscore)
+
+      newroll = (unscored.empty? ? true : false)
+
+      if newroll
+        print "\n#{@name} gets a new 5 dice roll!\n".console_purple
+      end
+
+      if rollscore == 0 # A dice score of 0 means the player gets 0 points, and this round is over for that player
+        puts "\n#{@name} gets no points this round!\n"
+        @score += 0
+        @keeprolling = "N"
+        # nextplayer(player)
+      else
+        ask_to_roll = true
+        while ask_to_roll
+          @keeprolling = rollagain
+          if @keeprolling == "Q"
+            ask_to_roll = false
+            gameover
+            # TODO:
+            # - Show final score
+            # - Return to menu screen
+          elsif @keeprolling == "Y"
+            numdice = (newroll ? 5 : unscored.size)
+            ask_to_roll = false
+          elsif @keeprolling == "N"
+            if (@score + accumulatedscore) >= 300 # More compact to test this way
+              # @score = 3000
+              if over3000? and @final == false
+                @final = true
+                # finalround(player)
+              else
+                print "\n#{@name}'s total score for this round is:  " + accumulatedscore.to_s + "\n"
+                @score += accumulatedscore
+              end
+            else # If the player has not yet reached 300, they get NOTHING!
+              print "\n#{@name} has not yet reached 300.  Score is 0.\n"
+            end
+            ask_to_roll = false
+            # nextplayer(player)
+          else
+            print "Invalid entry.  Choose one:  y/n/q\n"
+            sleep(0.65)
+            printscore(self, roll, unscored, rollscore, accumulatedscore)
+          end
+        end
+      end
+    end
+  end
 end
 
 class Game
 
   attr_reader :active
+  attr_accessor :playerarray
+  attr_accessor :numplayers
 
   def initialize
     @numplayers = 0
@@ -224,7 +359,7 @@ class Game
     end
   end
 
-  def score(dice)
+  def currentscore(dice)
     setpoints=[0,1000,200,300,400,500,600]
     piecepoints=[0,100,0,0,0,50,0]
     (1..6).map{|i|
@@ -233,14 +368,15 @@ class Game
     }.inject(0){|a,b| a+b}
   end
 
-  def rollagain # If Return is pressed alone, returns "Y" as the default
-    defaultArray = ["Y"]
-    print "\nKeep rolling? [yn] or Q to quit.  (Default = y)  ".console_red.chomp
-    defaultArray << gets.to_s.chomp.upcase
-    defaultArray[1].empty? ? defaultArray[0] : defaultArray[1] # Otherwise, return entered value.
-  end
+#   def rollagain # If Return is pressed alone, returns "Y" as the default
+#     defaultArray = ["Y"]
+#     print "\nKeep rolling? [yn] or Q to quit.  (Default = y)  ".console_red.chomp
+#     defaultArray << gets.to_s.chomp.upcase
+#     defaultArray[1].empty? ? defaultArray[0] : defaultArray[1] # Otherwise, return entered value.
+#   end
 
-  def printscore(p, r, u, score, accumulatedscore)
+#   def printscore(p, r, u, score, accumulatedscore)
+  def printheader
     system("clear")
     if @final
       print "FINAL ROUND!  FIGHT!\n".console_dark_green
@@ -255,11 +391,11 @@ class Game
     print ('_'*barwidth).console_dark_blue + "\n"
     puts "\n"
 
-    puts "#{p.name}'s turn.".console_dark_blue_underline + "\n\n" # Print player name
-    print "Dice values:  [#{r.join("] [")}]\n" # Print dice values
-    print "Roll Score:  #{score}\n" # Print current roll score
-    puts "Unscored dice:  " + "[#{u.join("] [")}]" # Print unscored dice
-    puts "\n#{p.name}'s score so far:  #{accumulatedscore}\n" # Print player's score so far
+#     puts "#{p.name}'s turn.".console_dark_blue_underline + "\n\n" # Print player name
+#     print "Dice values:  [#{r.join("] [")}]\n" # Print dice values
+#     print "Roll Score:  #{score}\n" # Print current roll score
+#     puts "Unscored dice:  " + "[#{u.join("] [")}]" # Print unscored dice
+#     puts "\n#{p.name}'s score so far:  #{accumulatedscore}\n" # Print player's score so far
   end
 
   def nextplayer(player)
@@ -305,94 +441,99 @@ CUT2
   end
 
   def play
-
-    @playerarray.each { |player|
-      # Set initial values per round
-      #
-      # For final round, do this for all but the last player, then
-      # exit & print scores.
-      numdice = 5
-      accumulatedscore = 0
-      player.keeprolling = "Y"
-      while player.keeprolling == "Y"
-        if @final == true
-          if @playerarray[-1].name == player.name
-            # exit
-            gameover
-          end
-        end
-        roll = player.playerroll(numdice)
-
-        rollscore = score(roll)
-        accumulatedscore += rollscore
-
-        unscored = roll.dup
-
-        unscored = unscored.each{|n|
-          3.times{unscored.delete_at(unscored.index(n))} if unscored.count(n) >= 3
-        }.reject{|n|
-          n == 1 || n == 5
-        }
-
-        printscore(player, roll, unscored, rollscore, accumulatedscore)
-
-        newroll = (unscored.empty? ? true : false)
-
-        if newroll
-          print "\n#{player.name} gets a new 5 dice roll!\n".console_purple
-        end
-
-        if rollscore == 0 # A dice score of 0 means the player gets 0 points, and this round is over for that player
-          puts "\n#{player.name} gets no points this round!\n"
-          player.score += 0
-          player.keeprolling = "N"
-          nextplayer(player)
-        else
-          ask_to_roll = true
-          while ask_to_roll
-            player.keeprolling = rollagain
-            if player.keeprolling == "Q"
-              ask_to_roll = false
-              gameover
-              # TODO:
-              # - Show final score
-              # - Return to menu screen
-            elsif player.keeprolling == "Y"
-              numdice = (newroll ? 5 : unscored.size)
-              ask_to_roll = false
-            elsif player.keeprolling == "N"
-              if (player.score + accumulatedscore) >= 300 # More compact to test this way
-                player.score = 3000
-                if player.over3000? and @final == false
-                  @final = true
-                  finalround(player)
-                else
-                  print "\n#{player.name}'s total score for this round is:  " + accumulatedscore.to_s + "\n"
-                  player.score += accumulatedscore
-                end
-              else # If the player has not yet reached 300, they get NOTHING!
-                print "\n#{player.name} has not yet reached 300.  Score is 0.\n"
-              end
-              ask_to_roll = false
-              nextplayer(player)
-            else
-              print "Invalid entry.  Choose one:  y/n/q\n"
-              sleep(0.65)
-              printscore(player, roll, unscored, rollscore, accumulatedscore)
-            end
-          end
-        end
-      end
+    @playerarray.each{|player|
+      printheader
+      player.printscore
     }
-
-    @roundnumber += 1
-    print "\nPress Return for next round, or Q for quit.  ".console_purple
-    nextround = gets.to_s.chomp.upcase
-
-    if nextround == "Q"
-      gameover
-    end
   end
+
+#     @playerarray.each { |player|
+#       # Set initial values per round
+#       #
+#       # For final round, do this for all but the last player, then
+#       # exit & print scores.
+#       numdice = 5
+#       accumulatedscore = 0
+#       player.keeprolling = "Y"
+#       while player.keeprolling == "Y"
+#         if @final == true
+#           if @playerarray[-1].name == player.name
+#             # exit
+#             gameover
+#           end
+#         end
+#         roll = player.playerroll(numdice)
+#
+#         rollscore = currentscore(roll)
+#         accumulatedscore += rollscore
+#
+#         unscored = roll.dup
+#
+#         unscored = unscored.each{|n|
+#           3.times{unscored.delete_at(unscored.index(n))} if unscored.count(n) >= 3
+#         }.reject{|n|
+#           n == 1 || n == 5
+#         }
+#
+#         printscore(player, roll, unscored, rollscore, accumulatedscore)
+#
+#         newroll = (unscored.empty? ? true : false)
+#
+#         if newroll
+#           print "\n#{player.name} gets a new 5 dice roll!\n".console_purple
+#         end
+#
+#         if rollscore == 0 # A dice score of 0 means the player gets 0 points, and this round is over for that player
+#           puts "\n#{player.name} gets no points this round!\n"
+#           player.score += 0
+#           player.keeprolling = "N"
+#           nextplayer(player)
+#         else
+#           ask_to_roll = true
+#           while ask_to_roll
+#             player.keeprolling = rollagain
+#             if player.keeprolling == "Q"
+#               ask_to_roll = false
+#               gameover
+#               # TODO:
+#               # - Show final score
+#               # - Return to menu screen
+#             elsif player.keeprolling == "Y"
+#               numdice = (newroll ? 5 : unscored.size)
+#               ask_to_roll = false
+#             elsif player.keeprolling == "N"
+#               if (player.score + accumulatedscore) >= 300 # More compact to test this way
+#                 player.score = 3000
+#                 if player.over3000? and @final == false
+#                   @final = true
+#                   finalround(player)
+#                 else
+#                   print "\n#{player.name}'s total score for this round is:  " + accumulatedscore.to_s + "\n"
+#                   player.score += accumulatedscore
+#                 end
+#               else # If the player has not yet reached 300, they get NOTHING!
+#                 print "\n#{player.name} has not yet reached 300.  Score is 0.\n"
+#               end
+#               ask_to_roll = false
+#               nextplayer(player)
+#             else
+#               print "Invalid entry.  Choose one:  y/n/q\n"
+#               sleep(0.65)
+#               printscore(player, roll, unscored, rollscore, accumulatedscore)
+#             end
+#           end
+#         end
+#       end
+#     }
+#
+#     @roundnumber += 1
+#     print "\nPress Return for next round, or Q for quit.  ".console_purple
+#     nextround = gets.to_s.chomp.upcase
+#
+#     if nextround == "Q"
+#       gameover
+#     end
+#   end
 
 #   def gameover
 #     system("clear")
