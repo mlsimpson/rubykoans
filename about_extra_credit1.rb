@@ -126,7 +126,7 @@ def menu_screen
         #   - If all dice score, roll with 5 dice.
         # 7:  Display current roll score
         # 8:  Check if player > 3000
-        
+
         # for each roll, display the header and the current roll score.
         # game.play
 
